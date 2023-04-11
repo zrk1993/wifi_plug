@@ -3,16 +3,21 @@
 #include <ESP8266mDNS.h>
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
+#include <ESPAsyncWiFiManager.h> 
 #include <AsyncElegantOTA.h>
+#include <PubSubClient.h>
 #include <LittleFS.h>
+#include <OneButton.h>
 
 #include "blink.h"
-#include "PubSubClient.h"
+
+#define SW_PIN 4
+#define BUTTON_PIN 12
+#define LED_PIN 13
+
+bool sw_state = false;
 
 const char* hostName = "myplug";
-const char* ssid = "CDS";
-const char* password = "Chan888999";
-
 const char* ID_MQTT = "d6d8fcd160ce48a3b38ff76e7e2df726";
 const char* topic = "myplug003";
 const char* mqtt_server = "bemfa.com";
@@ -24,14 +29,19 @@ WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 
 AsyncWebServer server(80);
+DNSServer dns;
+
+OneButton button(BUTTON_PIN, true);
+
+void changeSw(bool state) {
+  sw_state = state;
+  digitalWrite(SW_PIN, state);
+  digitalWrite(LED_PIN, state);
+}
 
 void connectWifi() {
-  WiFi.mode(WIFI_STA);
-  WiFi.begin();
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
+  AsyncWiFiManager wifiManager(&server, &dns);
+  wifiManager.autoConnect("ESPConfigAP");
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
@@ -47,12 +57,9 @@ void callback(char* topic, byte* payload, size_t length) {
 	Serial.print("Msg:");
 	Serial.println(msg);
 	if (msg == "off") {
-		blink_off();
-	} else if (msg == "on") {
-		blink_on();
+    changeSw(false);
 	} else {
-		msg.replace("on#", "");
-    blink_on();
+    changeSw(true);
 	}
 }
 
@@ -98,8 +105,31 @@ void setServer() {
   AsyncStaticWebHandler* handler = &server.serveStatic("/", LittleFS, "/");
   handler->setDefaultFile("index.html");
 
+  server.on("/state", HTTP_GET, [](AsyncWebServerRequest *request) {
+		request->send(200, "text/plain", sw_state ? "on" : "off");
+	});
+  
+	server.on("/sw", HTTP_GET, [](AsyncWebServerRequest *request) {
+		if(request->hasArg("state")) {
+			String v = request->arg("state");
+      changeSw(v.equals("on"));
+		}
+    request->send(200, "text/plain", "ok");
+	});
+
+  server.on("/restart", HTTP_GET, [](AsyncWebServerRequest *request) {
+		request->send(200, "text/plain", "restart");
+		Serial.println("restart 。。。 ");
+    delay(1000);
+		ESP.restart();
+	});
+
   server.begin();
   Serial.println("Web server started");
+}
+
+void buttonClick() {
+  changeSw(!sw_state);
 }
 
 void setup() {
@@ -109,14 +139,20 @@ void setup() {
   blink_on();
   connectWifi();
   setServer();
-
   mqttClient.setServer(mqtt_server, mqtt_server_port); // 设置mqtt服务器
   mqttClient.setCallback(callback); // mqtt消息处理
-
   blink_ok();
+
+  pinMode(SW_PIN, OUTPUT);
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  changeSw(false);
+  button.attachClick(buttonClick);
 }
 
 void loop() {
+  delay(100);
+  button.tick();
   MDNS.update();
 	if (mqttClient.connected()) {
 		mqttClient.loop();

@@ -1,13 +1,145 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-  <script src="/main.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+  <title>开关</title>
+  <style>
+    .flex {
+      display: flex;
+    }
+
+    .flex-1 {
+      flex: 1;
+    }
+
+    .tac {
+      text-align: center;
+    }
+
+    .justify-space-between {
+      justify-content: space-between;
+    }
+
+    .btn {
+      padding: 10px 20px;
+    }
+
+    .ml10 {
+      margin-left: 10px;
+    }
+
+    .mr10 {
+      margin-right: 10px;
+    }
+  </style>
+  <style>
+    #app {
+      padding: 20px;
+    }
+  </style>
+  <script>
+    (function flexible(window, document) {
+      var docEl = document.documentElement
+      var dpr = window.devicePixelRatio || 1
+      // adjust body font size
+      function setBodyFontSize() {
+        if (document.body) {
+          document.body.style.fontSize = (12 * dpr) + "px"
+        }
+        else {
+          document.addEventListener("DOMContentLoaded", setBodyFontSize)
+        }
+      }
+      setBodyFontSize();
+      // set 1rem = viewWidth / 10
+      function setRemUnit() {
+        var rem = docEl.clientWidth / 10
+        docEl.style.fontSize = rem + "px"
+      }
+
+      setRemUnit()
+
+      // reset rem unit on page resize
+      window.addEventListener("resize", setRemUnit)
+      window.addEventListener("pageshow", function (e) {
+        if (e.persisted) {
+          setRemUnit()
+        }
+      })
+
+      // detect 0.5px supports
+      if (dpr >= 2) {
+        var fakeBody = document.createElement("body")
+        var testElement = document.createElement("div")
+        testElement.style.border = ".5px solid transparent"
+        fakeBody.appendChild(testElement)
+        docEl.appendChild(fakeBody)
+        if (testElement.offsetHeight === 1) {
+          docEl.classList.add("hairlines")
+        }
+        docEl.removeChild(fakeBody)
+      }
+    }(window, document))
+  </script>
+  <style>
+  </style>
 </head>
+
 <body>
-  Hi ESP8266.!
+  <div id="app">
+    <h1 class="tac" id="brightness" style="font-size: 3.6em; min-height: 1.5em;">
+      -
+    </h1>
+    <div class="flex justify-space-between">
+      <button class="btn flex-1 mr10" style="font-size: 1.2em;" id="off">关</button>
+      <button class="btn flex-1 ml10" style="font-size: 1.2em;" id="on">开</button>
+    </div>
+  </div>
 </body>
+<script>
+  function change(s) {
+    update(s ? 'on' : 'off');
+    document.getElementById("brightness").innerHTML = s ? '开' : '关'
+  }
+
+  document.getElementById("off").onclick = function () {
+    change(false)
+  }
+
+  document.getElementById("on").onclick = function () {
+    change(true)
+  }
+
+  function debounce(callback, delay) {
+    var t = null;
+    return function (v) {
+      clearTimeout(t);
+      t = setTimeout(function () {
+        callback(v)
+      }, delay);
+    }
+  }
+
+  var update = debounce(function (v) {
+    fetch("/sw?state=" + v).then(function () {
+    }).catch(function (e) {
+      alert("系统错误")
+    })
+  }, 100)
+
+  function getInitVal () {
+    fetch("/state").then(function (res) {
+      return res.text()
+    }).then(function(v) {
+      change(v == 'on')
+    }).catch(function (e) {
+      alert("系统错误")
+    })
+  }
+  getInitVal()
+</script>
+
 </html>

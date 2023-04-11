@@ -3,28 +3,30 @@
 
 #include <Arduino.h>
 
+#define BLINK_PIN 2
+
 void blink(int times, int dl)
 {
-    pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, LOW);
+    pinMode(BLINK_PIN, OUTPUT);
+    digitalWrite(BLINK_PIN, LOW);
     bool led_on = false;
     for (int i = 0; i <= times * 2; i++)
     {
         delay(dl);
         led_on = !led_on;
-        digitalWrite(LED_BUILTIN, led_on ? LOW : HIGH);
+        digitalWrite(BLINK_PIN, led_on ? LOW : HIGH);
     }
-    digitalWrite(LED_BUILTIN, HIGH);
+    digitalWrite(BLINK_PIN, HIGH);
 }
 
 void blink_on () {
-    pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, LOW);
+    pinMode(BLINK_PIN, OUTPUT);
+    digitalWrite(BLINK_PIN, LOW);
 }
 
 void blink_off () {
-    pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, HIGH);
+    pinMode(BLINK_PIN, OUTPUT);
+    digitalWrite(BLINK_PIN, HIGH);
 }
 
 void blink(int times)
