@@ -38,7 +38,6 @@ OneButton button(BUTTON_PIN, true);
 void changeSw(bool state) {
   sw_state = state;
   digitalWrite(SW_PIN, state);
-  blink(2, 150);
 }
 
 void connectWifi() {
@@ -60,8 +59,10 @@ void callback(char* topic, byte* payload, size_t length) {
 	Serial.println(msg);
 	if (msg == "off") {
     changeSw(false);
+    blink(2, 150);
 	} else {
     changeSw(true);
+    blink(2, 150);
 	}
 }
 
@@ -71,12 +72,13 @@ bool checkMqttEnable () {
 }
 
 void reconnect() {
-  if (lastMqttReconnectTime > millis() - 1000 * 60 * 5 && lastMqttReconnectTime < millis()) {
+  if (lastMqttReconnectTime != 0 && millis() > lastMqttReconnectTime && millis() < lastMqttReconnectTime + 1000 * 60 * 5) {
     return;
   }
   lastMqttReconnectTime = millis();
   int i = 5;
 	while (!mqttClient.connected() && i--) {
+    Serial.printf("i=%d", i);
 		Serial.print("Attempting MQTT connection...");
 		// Attempt to connect
 		if (mqttClient.connect(config.mqtt_key)) {
@@ -133,11 +135,9 @@ void setServer() {
     strcpy(config.mqtt_host, request->arg("mqtt_host").c_str());
     strcpy(config.mqtt_port, request->arg("mqtt_port").c_str());
 		strcpy(config.mqtt_key, request->arg("mqtt_key").c_str());
-		strcpy(config.mqtt_topic, request->arg("topic").c_str());
+		strcpy(config.mqtt_topic, request->arg("mqtt_topic").c_str());
 		saveConfig();
 		request->send(200, "text/plain", "save ok, delay restart ...");
-    delay(1000);
-		ESP.restart();
 	});
 
   server.on("/restart", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -166,6 +166,7 @@ void setup() {
   setServer();
 
   if (checkMqttEnable()) {
+    Serial.println("\nMQTT Start ");
     mqttClient.setServer(config.mqtt_host, atoi(config.mqtt_port)); // 设置mqtt服务器
     mqttClient.setCallback(callback); // mqtt消息处理
   }

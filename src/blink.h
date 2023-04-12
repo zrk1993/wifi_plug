@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 
-#define BLINK_PIN 13
+#define BLINK_PIN BUILTIN_LED
 
 void blink(int times, int dl)
 {

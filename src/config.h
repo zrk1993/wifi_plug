@@ -9,6 +9,7 @@
 * 结构体
 */
 struct config_type {
+    int flag;
     char host_name[32];
     char mqtt_host[32];
     char mqtt_port[8];
@@ -16,7 +17,7 @@ struct config_type {
     char mqtt_topic[16];
 };
 
-config_type config = { "myplug", "bemfa.com", "9501", "", "myplug003" };
+config_type config = { 1, "myplug", "bemfa.com", "9501", "", "myplug003" };
 
 String getConfigTxt() {
     String str = "";
