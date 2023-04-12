@@ -10,18 +10,20 @@
 #include <OneButton.h>
 
 #include "blink.h"
+#include "config.h"
 
 #define SW_PIN 4
 #define BUTTON_PIN 12
 
 bool sw_state = false;
+bool enable_mqtt = false;
 
-const char* hostName = "myplug";
+// const char* hostName = "myplug";
 
-const char* mqtt_server = "bemfa.com";
-const int mqtt_server_port = 9501;
-const char* ID_MQTT = "d6d8fcd160ce48a3b38ff76e7e2df726";
-const char* topic = "myplug003";
+// const char* mqtt_server = "bemfa.com";
+// const int mqtt_server_port = 9501;
+// const char* ID_MQTT = "";
+// const char* topic = "myplug003";
 
 unsigned long lastMqttReconnectTime = 0;
 
@@ -63,6 +65,11 @@ void callback(char* topic, byte* payload, size_t length) {
 	}
 }
 
+bool checkMqttEnable () {
+  enable_mqtt = *config.mqtt_host != '\0' && *config.mqtt_port != '\0' && *config.mqtt_key != '\0' && *config.mqtt_topic != '\0';
+  return enable_mqtt;
+}
+
 void reconnect() {
   if (lastMqttReconnectTime > millis() - 1000 * 60 * 5 && lastMqttReconnectTime < millis()) {
     return;
@@ -72,12 +79,12 @@ void reconnect() {
 	while (!mqttClient.connected() && i--) {
 		Serial.print("Attempting MQTT connection...");
 		// Attempt to connect
-		if (mqttClient.connect(ID_MQTT)) {
+		if (mqttClient.connect(config.mqtt_key)) {
 			Serial.println("connected");
 			Serial.print("subscribe:");
-			Serial.println(topic);
+			Serial.println(config.mqtt_topic);
 			//订阅主题，如果需要订阅多个主题，可发送多条订阅指令client.subscribe(topic2);client.subscribe(topic3);
-			mqttClient.subscribe(topic);
+			mqttClient.subscribe(config.mqtt_topic);
 		} else {
 			Serial.print("failed, rc=");
 			Serial.print(mqttClient.state());
@@ -89,9 +96,9 @@ void reconnect() {
 }
 
 void setServer() {
-  if (MDNS.begin(hostName)) { // Start mDNS with name esp8266
+  if (MDNS.begin(config.host_name)) { // Start mDNS with name esp8266
 		Serial.println("mDNS started");
-		Serial.printf("http://%s.local\n", hostName);
+		Serial.printf("http://%s.local\n", config.host_name);
 	}
 
   AsyncElegantOTA.begin(&server); // Start ElegantOTA
@@ -117,6 +124,22 @@ void setServer() {
     request->send(200, "text/plain", "ok");
 	});
 
+  server.on("/loadConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+		String config_txt = getConfigTxt();
+		request->send(200, "text/plain", config_txt);
+	});
+	server.on("/saveConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
+		strcpy(config.host_name, request->arg("host_name").c_str());
+    strcpy(config.mqtt_host, request->arg("mqtt_host").c_str());
+    strcpy(config.mqtt_port, request->arg("mqtt_port").c_str());
+		strcpy(config.mqtt_key, request->arg("mqtt_key").c_str());
+		strcpy(config.mqtt_topic, request->arg("topic").c_str());
+		saveConfig();
+		request->send(200, "text/plain", "save ok, delay restart ...");
+    delay(1000);
+		ESP.restart();
+	});
+
   server.on("/restart", HTTP_GET, [](AsyncWebServerRequest *request) {
 		request->send(200, "text/plain", "restart");
 		Serial.println("restart 。。。 ");
@@ -137,10 +160,16 @@ void setup() {
   Serial.begin(9600);
   Serial.println("\nSerial star Running");
   blink_on();
+	loadConfig();
+	Serial.println("config_txt: " + getConfigTxt());
   connectWifi();
   setServer();
-  mqttClient.setServer(mqtt_server, mqtt_server_port); // 设置mqtt服务器
-  mqttClient.setCallback(callback); // mqtt消息处理
+
+  if (checkMqttEnable()) {
+    mqttClient.setServer(config.mqtt_host, atoi(config.mqtt_port)); // 设置mqtt服务器
+    mqttClient.setCallback(callback); // mqtt消息处理
+  }
+
   blink_ok();
 
   pinMode(SW_PIN, OUTPUT);
@@ -153,7 +182,7 @@ void loop() {
   delay(100);
   button.tick();
   MDNS.update();
-  if (ID_MQTT[0] == '\0' && topic[0] == '\0') {
+  if (enable_mqtt) {
     if (mqttClient.connected()) {
       mqttClient.loop();
     } else {
