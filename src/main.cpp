@@ -13,7 +13,6 @@
 
 #define SW_PIN 4
 #define BUTTON_PIN 12
-#define LED_PIN 13
 
 bool sw_state = false;
 
@@ -37,7 +36,7 @@ OneButton button(BUTTON_PIN, true);
 void changeSw(bool state) {
   sw_state = state;
   digitalWrite(SW_PIN, state);
-  digitalWrite(LED_PIN, state);
+  blink(2, 150);
 }
 
 void connectWifi() {
@@ -145,7 +144,6 @@ void setup() {
   blink_ok();
 
   pinMode(SW_PIN, OUTPUT);
-  pinMode(LED_PIN, OUTPUT);
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   changeSw(false);
   button.attachClick(buttonClick);
@@ -155,9 +153,11 @@ void loop() {
   delay(100);
   button.tick();
   MDNS.update();
-	if (mqttClient.connected()) {
-		mqttClient.loop();
-	} else {
-		reconnect();
-	}
+  if (ID_MQTT[0] == '\0' && topic[0] == '\0') {
+    if (mqttClient.connected()) {
+      mqttClient.loop();
+    } else {
+      reconnect();
+    }
+  }
 }
