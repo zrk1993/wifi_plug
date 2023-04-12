@@ -18,10 +18,11 @@
 bool sw_state = false;
 
 const char* hostName = "myplug";
-const char* ID_MQTT = "d6d8fcd160ce48a3b38ff76e7e2df726";
-const char* topic = "myplug003";
+
 const char* mqtt_server = "bemfa.com";
 const int mqtt_server_port = 9501;
+const char* ID_MQTT = "d6d8fcd160ce48a3b38ff76e7e2df726";
+const char* topic = "myplug003";
 
 unsigned long lastMqttReconnectTime = 0;
 
@@ -64,7 +65,7 @@ void callback(char* topic, byte* payload, size_t length) {
 }
 
 void reconnect() {
-  if (lastMqttReconnectTime > millis() - 1000 * 60 * 5) {
+  if (lastMqttReconnectTime > millis() - 1000 * 60 * 5 && lastMqttReconnectTime < millis()) {
     return;
   }
   lastMqttReconnectTime = millis();
