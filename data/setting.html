@@ -191,11 +191,13 @@
         let str = '';
         configs.split('&').forEach(v => {
             const [name, value] = v.split('=')
-            str += `
-            <div class="input-item">
-                <label>${name}</label>
-                <input type="text" name="${name}" value="${value}">
-            </div>`
+            if (name) {
+              str += `
+              <div class="input-item">
+                  <label>${name}</label>
+                  <input type="text" name="${name}" value="${value}">
+              </div>`
+            }
         });
         wifiBoxEL.innerHTML = str
     }
