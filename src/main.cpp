@@ -168,6 +168,10 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
   Serial.println("\nSerial star Running");
+  pinMode(BLINK_PIN, OUTPUT);
+  pinMode(SW_PIN, OUTPUT);
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+
   blink_on();
 	loadConfig();
 	Serial.println("config_txt: " + getConfigTxt());
@@ -182,9 +186,6 @@ void setup() {
   }
 
   blink_ok();
-
-  pinMode(SW_PIN, OUTPUT);
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
   changeSw(false);
   button.attachClick(buttonClick);
 
