@@ -443,7 +443,14 @@
           return res.text();
         })
         .then(function (v) {
-          fetch("/restart").catch(() => {})
+          var controller = new AbortController()
+          fetch("/restart", { signal: controller.signal })
+          setTimeout(() => {
+            controller.abort();
+          }, 500)
+          setTimeout(() => {
+            window.location.reload()
+          }, 2000)
           alert(v);
         })
         .catch(function (e) {

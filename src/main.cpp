@@ -96,9 +96,9 @@ void reconnect() {
 		} else {
 			Serial.print("failed, rc=");
 			Serial.print(mqttClient.state());
-			Serial.println(" try again in 3 seconds");
+			Serial.println(" try again in 1 seconds");
 			// Wait 1 seconds before retrying
-			delay(3000);
+			delay(1000);
 		}
 	}
 }
