@@ -18,13 +18,6 @@
 bool sw_state = false;
 bool enable_mqtt = false;
 
-// const char* hostName = "myplug";
-
-// const char* mqtt_server = "bemfa.com";
-// const int mqtt_server_port = 9501;
-// const char* ID_MQTT = "";
-// const char* topic = "myplug003";
-
 unsigned long lastMqttReconnectTime = 0;
 
 WiFiClient wifiClient;
@@ -46,6 +39,20 @@ void connectWifi() {
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+}
+
+String chipInfo() {
+  String str = "";
+  str += "&ChipID=";
+  str += ESP.getChipId();
+  str += "&FlashSize=";
+  str += ESP.getFlashChipSize();
+  str += "&AvailableHeap=";
+  str += ESP.getFreeHeap();
+  str += "&StationSSID=" + WiFi.SSID();
+  str += "&StationIP=" + WiFi.localIP().toString();
+  str += "&StationMAC=" + WiFi.macAddress();
+  return str;
 }
 
 void callback(char* topic, byte* payload, size_t length) {
@@ -78,7 +85,6 @@ void reconnect() {
   lastMqttReconnectTime = millis();
   int i = 5;
 	while (!mqttClient.connected() && i--) {
-    Serial.printf("i=%d", i);
 		Serial.print("Attempting MQTT connection...");
 		// Attempt to connect
 		if (mqttClient.connect(config.mqtt_key)) {
@@ -90,9 +96,9 @@ void reconnect() {
 		} else {
 			Serial.print("failed, rc=");
 			Serial.print(mqttClient.state());
-			Serial.println(" try again in 5 seconds");
+			Serial.println(" try again in 3 seconds");
 			// Wait 1 seconds before retrying
-			delay(1000);
+			delay(3000);
 		}
 	}
 }
@@ -126,6 +132,10 @@ void setServer() {
     request->send(200, "text/plain", "ok");
 	});
 
+  server.on("/info", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String info = chipInfo();
+		request->send(200, "text/plain", info);
+	});
   server.on("/loadConfig", HTTP_GET, [](AsyncWebServerRequest *request) {
 		String config_txt = getConfigTxt();
 		request->send(200, "text/plain", config_txt);
@@ -143,7 +153,6 @@ void setServer() {
   server.on("/restart", HTTP_GET, [](AsyncWebServerRequest *request) {
 		request->send(200, "text/plain", "restart");
 		Serial.println("restart 。。。 ");
-    delay(1000);
 		ESP.restart();
 	});
 
@@ -166,9 +175,10 @@ void setup() {
   setServer();
 
   if (checkMqttEnable()) {
-    Serial.println("\nMQTT Start ");
+    Serial.println("MQTT Start ");
     mqttClient.setServer(config.mqtt_host, atoi(config.mqtt_port)); // 设置mqtt服务器
     mqttClient.setCallback(callback); // mqtt消息处理
+    reconnect();
   }
 
   blink_ok();
@@ -177,6 +187,8 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   changeSw(false);
   button.attachClick(buttonClick);
+
+  Serial.println("start ok.");
 }
 
 void loop() {

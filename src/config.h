@@ -9,15 +9,15 @@
 * 结构体
 */
 struct config_type {
-    int flag;
+    int init;
     char host_name[32];
     char mqtt_host[32];
     char mqtt_port[8];
-    char mqtt_key[32];
+    char mqtt_key[64];
     char mqtt_topic[16];
 };
 
-config_type config = { 1, "myplug", "bemfa.com", "9501", "", "myplug003" };
+config_type config;
 
 String getConfigTxt() {
     String str = "";
@@ -43,7 +43,7 @@ String getConfigTxt() {
 * 存储信息
 */
 void saveConfig() {
-    EEPROM.begin(128);
+    EEPROM.begin(256);
     uint8_t *p = (uint8_t*)(&config);
     for (unsigned int i = 0; i < sizeof(config); i++) {
         EEPROM.write(i, *(p + i));
@@ -56,11 +56,20 @@ void saveConfig() {
 */
 uint8_t *p = (uint8_t*)(&config);
 void loadConfig() {
-    EEPROM.begin(512);
+    EEPROM.begin(256);
     for (unsigned int i = 0; i < sizeof(config); i++) {
         *(p + i) = EEPROM.read(i);
     }
     EEPROM.commit();
+    
+    if (config.init != 1) {
+        config.init = 1;
+        strcpy(config.host_name, "myplug");
+        strcpy(config.mqtt_host, "bemfa.com");
+        strcpy(config.mqtt_port, "9501");
+        strcpy(config.mqtt_key, "");
+        strcpy(config.mqtt_topic, "myplug003");
+    }
 }
 
 #endif
