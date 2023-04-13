@@ -443,6 +443,7 @@
           return res.text();
         })
         .then(function (v) {
+          fetch("/restart").catch(() => {})
           alert(v);
         })
         .catch(function (e) {
